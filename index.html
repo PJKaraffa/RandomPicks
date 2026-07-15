@@ -3,210 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Random Pull System</title>
+  <title>Simple Random Pull</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <h1>Random Pull System</h1>
-      <p>Upload data, randomly select records, and exclude prior selections.</p>
+
+  <div class="container">
+    <h1>Random Pull</h1>
+
+    <div class="card">
+      <label for="fileInput">Upload CSV File</label>
+      <input id="fileInput" type="file" accept=".csv">
+
+      <label for="nameColumn">Name Column</label>
+      <select id="nameColumn" disabled>
+        <option value="">Upload a file first</option>
+      </select>
+
+      <label for="pullNumber">Number to Pull</label>
+      <input id="pullNumber" type="number" min="1" value="1">
+
+      <button id="pullButton" disabled>Pull Random Names</button>
+      <button id="resetButton" class="secondary">Reset</button>
+
+      <p id="message"></p>
     </div>
-    <button id="resetEverythingButton" class="button button-danger button-small">
-      Reset Everything
-    </button>
-  </header>
 
-  <main class="page">
-    <section class="card setup-card">
-      <div class="section-heading">
-        <div>
-          <h2>1. Load Data</h2>
-          <p>Upload a CSV file. The first row must contain column headings.</p>
-        </div>
-      </div>
+    <div class="card">
+      <h2>Selected Names</h2>
+      <ul id="selectedList">
+        <li>No names selected yet.</li>
+      </ul>
+    </div>
 
-      <div class="upload-grid">
-        <label class="file-picker">
-          <span>Choose CSV File</span>
-          <input id="fileInput" type="file" accept=".csv,text/csv">
-        </label>
+    <div class="card">
+      <h2>Previously Selected / Excluded</h2>
+      <ul id="excludedList">
+        <li>No excluded names.</li>
+      </ul>
 
-        <div class="field">
-          <label for="uniqueColumnSelect">Unique ID Column</label>
-          <select id="uniqueColumnSelect" disabled>
-            <option value="">Load a file first</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="displayColumnSelect">Primary Display Column</label>
-          <select id="displayColumnSelect" disabled>
-            <option value="">Load a file first</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="fileStatus" class="status-message info">
-        No file loaded.
-      </div>
-    </section>
-
-    <section class="dashboard-grid">
-      <div class="metric-card">
-        <span>Total Loaded</span>
-        <strong id="totalLoadedCount">0</strong>
-      </div>
-
-      <div class="metric-card">
-        <span>Eligible</span>
-        <strong id="eligibleCount">0</strong>
-      </div>
-
-      <div class="metric-card">
-        <span>Excluded</span>
-        <strong id="excludedCount">0</strong>
-      </div>
-
-      <div class="metric-card">
-        <span>Selected This Pull</span>
-        <strong id="selectedCount">0</strong>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="section-heading">
-        <div>
-          <h2>2. Run Random Pull</h2>
-          <p>Previously selected people remain excluded until restored or cleared.</p>
-        </div>
-      </div>
-
-      <div class="pull-controls">
-        <div class="field number-field">
-          <label for="pullCountInput">Number to Pull</label>
-          <input id="pullCountInput" type="number" min="1" value="1">
-        </div>
-
-        <label class="checkbox-control">
-          <input id="autoExcludeCheckbox" type="checkbox" checked>
-          <span>Automatically exclude selected records from future pulls</span>
-        </label>
-
-        <button id="runPullButton" class="button button-primary" disabled>
-          Run Random Pull
-        </button>
-
-        <button id="clearCurrentPullButton" class="button button-secondary" disabled>
-          Clear Current Pull
-        </button>
-      </div>
-
-      <div id="pullMessage" class="status-message hidden"></div>
-    </section>
-
-    <section class="three-column-layout">
-      <section class="card table-card">
-        <div class="section-heading compact">
-          <div>
-            <h2>Eligible Records</h2>
-            <p>Records available for the next random pull.</p>
-          </div>
-          <button id="excludeCheckedButton" class="button button-warning button-small" disabled>
-            Exclude Checked
-          </button>
-        </div>
-
-        <div class="table-tools">
-          <input id="eligibleSearchInput" type="search" placeholder="Search eligible records...">
-        </div>
-
-        <div class="table-wrapper">
-          <table>
-            <thead id="eligibleTableHead"></thead>
-            <tbody id="eligibleTableBody">
-              <tr>
-                <td class="empty-state">No data loaded.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card table-card selected-card">
-        <div class="section-heading compact">
-          <div>
-            <h2>Selected This Pull</h2>
-            <p>The latest randomly selected records.</p>
-          </div>
-          <button id="exportCurrentButton" class="button button-success button-small" disabled>
-            Export Current
-          </button>
-        </div>
-
-        <div id="selectedResults" class="selected-results">
-          <div class="empty-state-panel">No records selected yet.</div>
-        </div>
-      </section>
-
-      <section class="card table-card">
-        <div class="section-heading compact">
-          <div>
-            <h2>Excluded Records</h2>
-            <p>Restore anyone who should be eligible again.</p>
-          </div>
-          <div class="button-group">
-            <button id="exportHistoryButton" class="button button-success button-small" disabled>
-              Export History
-            </button>
-            <button id="restoreAllButton" class="button button-secondary button-small" disabled>
-              Restore All
-            </button>
-          </div>
-        </div>
-
-        <div class="table-tools">
-          <input id="excludedSearchInput" type="search" placeholder="Search excluded records...">
-        </div>
-
-        <div class="table-wrapper">
-          <table>
-            <thead id="excludedTableHead"></thead>
-            <tbody id="excludedTableBody">
-              <tr>
-                <td class="empty-state">No excluded records.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </section>
-
-    <section class="card">
-      <div class="section-heading compact">
-        <div>
-          <h2>Pull History</h2>
-          <p>Each completed random pull is recorded with its date and time.</p>
-        </div>
-        <button id="clearHistoryButton" class="button button-danger button-small" disabled>
-          Clear History
-        </button>
-      </div>
-
-      <div id="historyContainer" class="history-container">
-        <div class="empty-state-panel">No pull history yet.</div>
-      </div>
-    </section>
-  </main>
-
-  <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-card">
-      <h2 id="confirmTitle">Confirm</h2>
-      <p id="confirmText"></p>
-      <div class="modal-actions">
-        <button id="confirmCancelButton" class="button button-secondary">Cancel</button>
-        <button id="confirmOkButton" class="button button-danger">Confirm</button>
-      </div>
+      <button id="restoreAllButton" class="secondary" disabled>
+        Restore All
+      </button>
     </div>
   </div>
 
