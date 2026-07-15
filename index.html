@@ -3,50 +3,118 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simple Random Pull</title>
+  <title>Random Pull System</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="container">
-    <h1>Random Pull</h1>
+  <header class="page-header">
+    <div class="header-content">
+      <div>
+        <p class="eyebrow">Simple Selection Tool</p>
+        <h1>Random Pull System</h1>
+        <p class="subtitle">
+          Upload a list, choose how many names to select, and automatically exclude prior selections.
+        </p>
+      </div>
 
-    <div class="card">
-      <label for="fileInput">Upload CSV File</label>
-      <input id="fileInput" type="file" accept=".csv">
-
-      <label for="nameColumn">Name Column</label>
-      <select id="nameColumn" disabled>
-        <option value="">Upload a file first</option>
-      </select>
-
-      <label for="pullNumber">Number to Pull</label>
-      <input id="pullNumber" type="number" min="1" value="1">
-
-      <button id="pullButton" disabled>Pull Random Names</button>
-      <button id="resetButton" class="secondary">Reset</button>
-
-      <p id="message"></p>
+      <div class="header-badge">
+        <span id="availableCount">0</span>
+        <small>Available</small>
+      </div>
     </div>
+  </header>
 
-    <div class="card">
-      <h2>Selected Names</h2>
-      <ul id="selectedList">
-        <li>No names selected yet.</li>
-      </ul>
-    </div>
+  <main class="container">
 
-    <div class="card">
-      <h2>Previously Selected / Excluded</h2>
-      <ul id="excludedList">
-        <li>No excluded names.</li>
-      </ul>
+    <section class="card setup-card">
+      <div class="section-title">
+        <span class="step-number">1</span>
+        <div>
+          <h2>Load Your List</h2>
+          <p>Upload a CSV file and select the column containing the names.</p>
+        </div>
+      </div>
 
-      <button id="restoreAllButton" class="secondary" disabled>
-        Restore All
-      </button>
-    </div>
-  </div>
+      <div class="form-grid">
+        <div class="field full-width">
+          <label for="fileInput">CSV File</label>
+          <label class="file-upload" for="fileInput">
+            <span class="file-icon">↑</span>
+            <span>
+              <strong>Choose a CSV file</strong>
+              <small id="fileName">No file selected</small>
+            </span>
+          </label>
+          <input id="fileInput" class="hidden-file" type="file" accept=".csv">
+        </div>
+
+        <div class="field">
+          <label for="nameColumn">Name Column</label>
+          <select id="nameColumn" disabled>
+            <option value="">Upload a file first</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="pullNumber">Number to Pull</label>
+          <input id="pullNumber" type="number" min="1" value="1">
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button id="pullButton" class="primary-button" disabled>
+          Pull Random Names
+        </button>
+
+        <button id="resetButton" class="secondary-button">
+          Reset
+        </button>
+      </div>
+
+      <p id="message" class="message"></p>
+    </section>
+
+    <section class="results-grid">
+
+      <div class="card">
+        <div class="section-title small">
+          <span class="step-number">2</span>
+          <div>
+            <h2>Selected Names</h2>
+            <p>Names selected in the latest pull.</p>
+          </div>
+        </div>
+
+        <div id="selectedList" class="name-list empty-list">
+          <div class="empty-message">No names selected yet.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-header-row">
+          <div class="section-title small">
+            <span class="step-number muted">3</span>
+            <div>
+              <h2>Excluded Names</h2>
+              <p>Previously selected names will not be pulled again.</p>
+            </div>
+          </div>
+
+          <span id="excludedCount" class="count-pill">0</span>
+        </div>
+
+        <div id="excludedList" class="name-list empty-list">
+          <div class="empty-message">No excluded names.</div>
+        </div>
+
+        <button id="restoreAllButton" class="restore-all-button" disabled>
+          Restore All Names
+        </button>
+      </div>
+
+    </section>
+  </main>
 
   <script src="script.js"></script>
 </body>
