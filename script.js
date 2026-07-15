@@ -154,11 +154,35 @@ function getUniqueNames() {
 
 function shuffle(array) {
   for (let index = array.length - 1; index > 0; index--) {
-    const randomIndex = Math.floor(Math.random() * (index + 1));
-    [array[index], array[randomIndex]] = [array[randomIndex], array[index]];
+    const randomIndex = secureRandomIndex(index + 1);
+
+    [array[index], array[randomIndex]] = [
+      array[randomIndex],
+      array[index]
+    ];
   }
 
   return array;
+}
+
+function secureRandomIndex(max) {
+  if (!Number.isInteger(max) || max <= 0) {
+    throw new Error("Maximum value must be a positive integer.");
+  }
+
+  const randomValues = new Uint32Array(1);
+  const largestValidValue =
+    Math.floor(0x100000000 / max) * max;
+
+  let randomValue;
+
+  do {
+    crypto.getRandomValues(randomValues);
+    randomValue = randomValues[0];
+  } while (randomValue >= largestValidValue);
+
+  return randomValue % max;
+}
 }
 
 function renderSelectedNames() {
