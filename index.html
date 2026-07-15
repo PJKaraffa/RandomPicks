@@ -3,119 +3,122 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Random Pull System</title>
+  <title>Random Pull</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <header class="page-header">
-    <div class="header-content">
+<header class="hero">
+  <div class="hero-inner">
+    <div class="brand">
+      <div class="brand-icon">👥</div>
       <div>
-        <p class="eyebrow">Simple Selection Tool</p>
-        <h1>Random Pull System</h1>
-        <p class="subtitle">
-          Upload a list, choose how many names to select, and automatically exclude prior selections.
-        </p>
-      </div>
-
-      <div class="header-badge">
-        <span id="availableCount">0</span>
-        <small>Available</small>
+        <h1>Random Pull</h1>
+        <p>Upload a list, choose how many names to select, and control whether prior selections are excluded.</p>
       </div>
     </div>
-  </header>
 
-  <main class="container">
+    <button id="resetAllButton" class="reset-all-button" type="button">
+      ↻ Reset All
+    </button>
+  </div>
+</header>
 
-    <section class="card setup-card">
-      <div class="section-title">
-        <span class="step-number">1</span>
-        <div>
-          <h2>Load Your List</h2>
-          <p>Upload a CSV file and select the column containing the names.</p>
-        </div>
+<main class="page">
+
+  <section class="card setup-card">
+    <div class="section-heading">
+      <span class="step">1</span>
+      <div>
+        <h2>Load Your List</h2>
+        <p>Upload a CSV file and select the column containing the names.</p>
+      </div>
+    </div>
+
+    <div class="control-grid">
+
+      <div class="field upload-field">
+        <label>CSV File</label>
+
+        <label for="fileInput" class="upload-box">
+          <span class="upload-icon">↑</span>
+          <span class="upload-text">
+            <strong>Choose a CSV file</strong>
+            <small id="fileName">No file selected</small>
+          </span>
+        </label>
+
+        <input id="fileInput" type="file" accept=".csv,text/csv" hidden>
       </div>
 
-      <div class="form-grid">
-        <div class="field full-width">
-          <label for="fileInput">CSV File</label>
-          <label class="file-upload" for="fileInput">
-            <span class="file-icon">↑</span>
-            <span>
-              <strong>Choose a CSV file</strong>
-              <small id="fileName">No file selected</small>
-            </span>
-          </label>
-          <input id="fileInput" class="hidden-file" type="file" accept=".csv">
-        </div>
-
-        <div class="field">
-          <label for="nameColumn">Name Column</label>
-          <select id="nameColumn" disabled>
-            <option value="">Upload a file first</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="pullNumber">Number to Pull</label>
-          <input id="pullNumber" type="number" min="1" value="1">
-        </div>
+      <div class="field">
+        <label for="nameColumn">Name Column</label>
+        <select id="nameColumn" disabled>
+          <option value="">Upload a file first</option>
+        </select>
       </div>
 
-      <div class="button-row">
-        <button id="pullButton" class="primary-button" disabled>
-          Pull Random Names
-        </button>
-
-        <button id="resetButton" class="secondary-button">
-          Reset
-        </button>
+      <div class="field">
+        <label for="pullNumber">Number to Pull</label>
+        <input id="pullNumber" type="number" min="1" value="1">
       </div>
 
-      <p id="message" class="message"></p>
-    </section>
-
-    <section class="results-grid">
-
-      <div class="card">
-        <div class="section-title small">
-          <span class="step-number">2</span>
-          <div>
-            <h2>Selected Names</h2>
-            <p>Names selected in the latest pull.</p>
-          </div>
-        </div>
-
-        <div id="selectedList" class="name-list empty-list">
-          <div class="empty-message">No names selected yet.</div>
-        </div>
+      <div class="field">
+        <label for="excludeChoice">Exclude Previously Selected Names</label>
+        <select id="excludeChoice">
+          <option value="yes" selected>Yes — exclude</option>
+          <option value="no">No — allow repeats</option>
+        </select>
       </div>
 
-      <div class="card">
-        <div class="section-header-row">
-          <div class="section-title small">
-            <span class="step-number muted">3</span>
-            <div>
-              <h2>Excluded Names</h2>
-              <p>Previously selected names will not be pulled again.</p>
-            </div>
-          </div>
+    </div>
 
-          <span id="excludedCount" class="count-pill">0</span>
-        </div>
+    <div class="action-row">
+      <button id="pullButton" class="pull-button" type="button" disabled>
+        ⇄ &nbsp; Pull Random Names
+      </button>
 
-        <div id="excludedList" class="name-list empty-list">
-          <div class="empty-message">No excluded names.</div>
-        </div>
+      <button id="resetButton" class="reset-button" type="button">
+        Reset
+      </button>
+    </div>
 
-        <button id="restoreAllButton" class="restore-all-button" disabled>
-          Restore All Names
-        </button>
+    <p id="message" class="message"></p>
+
+    <div class="status-row">
+      <div class="status-item">
+        <span>Loaded</span>
+        <strong id="loadedCount">0</strong>
       </div>
 
-    </section>
-  </main>
+      <div class="status-item">
+        <span>Available</span>
+        <strong id="availableCount">0</strong>
+      </div>
 
-  <script src="script.js"></script>
+      <div class="status-item">
+        <span>Previously selected</span>
+        <strong id="previousCount">0</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="card results-card">
+    <div class="section-heading">
+      <span class="step">2</span>
+      <div>
+        <h2>Selected Names</h2>
+        <p>Names selected in the latest pull.</p>
+      </div>
+    </div>
+
+    <div id="selectedList" class="selected-list">
+      <div class="empty-message">No names selected yet.</div>
+    </div>
+  </section>
+
+</main>
+
+<script src="script.js"></script>
 </body>
 </html>
