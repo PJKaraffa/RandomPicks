@@ -4,6 +4,7 @@ let excludedNames = [];
 let selectedThisPull = [];
 
 const fileInput = document.getElementById("fileInput");
+const fileName = document.getElementById("fileName");
 const nameColumn = document.getElementById("nameColumn");
 const pullNumber = document.getElementById("pullNumber");
 const pullButton = document.getElementById("pullButton");
@@ -12,6 +13,8 @@ const restoreAllButton = document.getElementById("restoreAllButton");
 const selectedList = document.getElementById("selectedList");
 const excludedList = document.getElementById("excludedList");
 const message = document.getElementById("message");
+const availableCount = document.getElementById("availableCount");
+const excludedCount = document.getElementById("excludedCount");
 
 fileInput.addEventListener("change", loadFile);
 pullButton.addEventListener("click", pullNames);
@@ -25,11 +28,13 @@ async function loadFile(event) {
     return;
   }
 
+  fileName.textContent = file.name;
+
   const text = await file.text();
   const parsed = parseCSV(text);
 
   if (parsed.length < 2) {
-    showMessage("The file must have a heading row and at least one name.", "red");
+    showMessage("The file must have a heading row and at least one name.", "error");
     return;
   }
 
@@ -59,11 +64,13 @@ async function loadFile(event) {
   excludedNames = [];
   selectedThisPull = [];
 
+  nameColumn.disabled = false;
   pullButton.disabled = false;
   restoreAllButton.disabled = true;
 
   renderLists();
-  showMessage(`${rows.length} records loaded.`, "green");
+  updateCounts();
+  showMessage(`${rows.length} records loaded successfully.`, "success");
 }
 
 function pullNames() {
@@ -71,7 +78,7 @@ function pullNames() {
   const amount = Number(pullNumber.value);
 
   if (!Number.isInteger(amount) || amount < 1) {
-    showMessage("Enter a valid number to pull.", "red");
+    showMessage("Enter a valid number to pull.", "error");
     return;
   }
 
@@ -85,7 +92,7 @@ function pullNames() {
   if (amount > uniqueAvailable.length) {
     showMessage(
       `Only ${uniqueAvailable.length} name(s) are still available.`,
-      "red"
+      "error"
     );
     return;
   }
@@ -100,7 +107,8 @@ function pullNames() {
   });
 
   renderLists();
-  showMessage(`${amount} name(s) selected.`, "green");
+  updateCounts();
+  showMessage(`${amount} name(s) selected.`, "success");
 }
 
 function shuffle(array) {
@@ -114,35 +122,54 @@ function renderLists() {
   selectedList.innerHTML = "";
 
   if (selectedThisPull.length === 0) {
-    selectedList.innerHTML = "<li>No names selected yet.</li>";
+    selectedList.className = "name-list empty-list";
+    selectedList.innerHTML = '<div class="empty-message">No names selected yet.</div>';
   } else {
-    selectedThisPull.forEach(name => {
-      const li = document.createElement("li");
-      li.textContent = name;
-      selectedList.appendChild(li);
+    selectedList.className = "name-list";
+
+    selectedThisPull.forEach((name, index) => {
+      const item = document.createElement("div");
+      item.className = "name-card selected";
+
+      const number = document.createElement("span");
+      number.className = "name-number";
+      number.textContent = index + 1;
+
+      const text = document.createElement("span");
+      text.className = "name-text";
+      text.textContent = name;
+
+      item.appendChild(number);
+      item.appendChild(text);
+      selectedList.appendChild(item);
     });
   }
 
   excludedList.innerHTML = "";
 
   if (excludedNames.length === 0) {
-    excludedList.innerHTML = "<li>No excluded names.</li>";
+    excludedList.className = "name-list empty-list";
+    excludedList.innerHTML = '<div class="empty-message">No excluded names.</div>';
     restoreAllButton.disabled = true;
   } else {
+    excludedList.className = "name-list";
+
     excludedNames.forEach(name => {
-      const li = document.createElement("li");
-      li.textContent = name;
+      const item = document.createElement("div");
+      item.className = "name-card";
+
+      const text = document.createElement("span");
+      text.className = "name-text";
+      text.textContent = name;
 
       const restoreButton = document.createElement("button");
+      restoreButton.className = "restore-button";
       restoreButton.textContent = "Restore";
-      restoreButton.style.width = "auto";
-      restoreButton.style.marginLeft = "10px";
-      restoreButton.style.padding = "5px 10px";
-
       restoreButton.addEventListener("click", () => restoreName(name));
 
-      li.appendChild(restoreButton);
-      excludedList.appendChild(li);
+      item.appendChild(text);
+      item.appendChild(restoreButton);
+      excludedList.appendChild(item);
     });
 
     restoreAllButton.disabled = false;
@@ -152,15 +179,19 @@ function renderLists() {
 function restoreName(name) {
   excludedNames = excludedNames.filter(item => item !== name);
   selectedThisPull = selectedThisPull.filter(item => item !== name);
+
   renderLists();
-  showMessage(`${name} was restored.`, "green");
+  updateCounts();
+  showMessage(`${name} was restored.`, "success");
 }
 
 function restoreAll() {
   excludedNames = [];
   selectedThisPull = [];
+
   renderLists();
-  showMessage("All names were restored.", "green");
+  updateCounts();
+  showMessage("All names were restored.", "success");
 }
 
 function resetEverything() {
@@ -170,6 +201,7 @@ function resetEverything() {
   selectedThisPull = [];
 
   fileInput.value = "";
+  fileName.textContent = "No file selected";
   nameColumn.innerHTML = '<option value="">Upload a file first</option>';
   nameColumn.disabled = true;
   pullButton.disabled = true;
@@ -177,7 +209,22 @@ function resetEverything() {
   pullNumber.value = 1;
 
   renderLists();
-  showMessage("System reset.", "green");
+  updateCounts();
+  showMessage("System reset.", "success");
+}
+
+function updateCounts() {
+  const columnIndex = Number(nameColumn.value);
+
+  const allNames = rows
+    .map(row => (row[columnIndex] || "").trim())
+    .filter(name => name !== "");
+
+  const uniqueNames = [...new Set(allNames)];
+  const available = uniqueNames.filter(name => !excludedNames.includes(name));
+
+  availableCount.textContent = available.length;
+  excludedCount.textContent = excludedNames.length;
 }
 
 function parseCSV(text) {
@@ -222,7 +269,12 @@ function parseCSV(text) {
   return rows;
 }
 
-function showMessage(text, color) {
+function showMessage(text, type) {
   message.textContent = text;
-  message.style.color = color;
+
+  if (type === "error") {
+    message.style.color = "#b42318";
+  } else {
+    message.style.color = "#16803c";
+  }
 }
