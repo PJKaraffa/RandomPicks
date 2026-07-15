@@ -2,6 +2,7 @@ let rows = [];
 let headers = [];
 let previouslySelected = [];
 let selectedThisPull = [];
+let isSetupCollapsed = false;
 
 const fileInput = document.getElementById("fileInput");
 const fileName = document.getElementById("fileName");
@@ -11,25 +12,35 @@ const excludeChoice = document.getElementById("excludeChoice");
 const pullButton = document.getElementById("pullButton");
 const resetButton = document.getElementById("resetButton");
 const resetAllButton = document.getElementById("resetAllButton");
+const newPullButton = document.getElementById("newPullButton");
+const setupToggle = document.getElementById("setupToggle");
+const setupCard = document.getElementById("setupCard");
+const collapsedSummary = document.getElementById("collapsedSummary");
+const toggleIcon = document.getElementById("toggleIcon");
+const setupSubtitle = document.getElementById("setupSubtitle");
 const selectedList = document.getElementById("selectedList");
 const message = document.getElementById("message");
 const loadedCount = document.getElementById("loadedCount");
 const availableCount = document.getElementById("availableCount");
 const previousCount = document.getElementById("previousCount");
+const summaryFile = document.getElementById("summaryFile");
+const summaryPulled = document.getElementById("summaryPulled");
+const summaryExclude = document.getElementById("summaryExclude");
+const summaryAvailable = document.getElementById("summaryAvailable");
 
 fileInput.addEventListener("change", loadCSV);
 pullButton.addEventListener("click", pullRandomNames);
 resetButton.addEventListener("click", resetSelections);
 resetAllButton.addEventListener("click", resetEverything);
+newPullButton.addEventListener("click", startNewPull);
+setupToggle.addEventListener("click", toggleSetup);
 nameColumn.addEventListener("change", updateCounts);
 excludeChoice.addEventListener("change", updateCounts);
 
 async function loadCSV(event) {
   const file = event.target.files[0];
 
-  if (!file) {
-    return;
-  }
+  if (!file) return;
 
   try {
     const text = await file.text();
@@ -65,24 +76,14 @@ async function loadCSV(event) {
     fileName.textContent = file.name;
     nameColumn.disabled = false;
     pullButton.disabled = false;
-
     previouslySelected = [];
     selectedThisPull = [];
 
+    expandSetup();
     renderSelectedNames();
     updateCounts();
     showMessage(`${rows.length} record(s) loaded.`, "success");
   } catch (error) {
-    rows = [];
-    headers = [];
-    fileInput.value = "";
-    fileName.textContent = "No file selected";
-    nameColumn.innerHTML = '<option value="">Upload a file first</option>';
-    nameColumn.disabled = true;
-    pullButton.disabled = true;
-
-    renderSelectedNames();
-    updateCounts();
     showMessage(error.message || "The file could not be loaded.", "error");
   }
 }
@@ -118,21 +119,12 @@ function pullRandomNames() {
     ? allNames.filter(name => !previouslySelected.includes(name))
     : allNames;
 
-  if (!eligibleNames.length) {
-    showMessage("There are no names available. Click Reset to start again.", "error");
-    return;
-  }
-
   if (amount > eligibleNames.length) {
-    showMessage(
-      `Only ${eligibleNames.length} name(s) are available for this pull.`,
-      "error"
-    );
+    showMessage(`Only ${eligibleNames.length} name(s) are available.`, "error");
     return;
   }
 
-  const shuffled = shuffle([...eligibleNames]);
-  selectedThisPull = shuffled.slice(0, amount);
+  selectedThisPull = shuffle([...eligibleNames]).slice(0, amount);
 
   if (shouldExclude) {
     selectedThisPull.forEach(name => {
@@ -144,31 +136,26 @@ function pullRandomNames() {
 
   renderSelectedNames();
   updateCounts();
+  showMessage(`${amount} name(s) selected.`, "success");
 
-  const ending = shouldExclude
-    ? " They will be excluded from the next pull."
-    : " Repeats are allowed on the next pull.";
-
-  showMessage(`${amount} name(s) selected.${ending}`, "success");
+  collapseSetup();
+  newPullButton.classList.remove("hidden");
 }
 
 function getUniqueNames() {
   const columnIndex = Number(nameColumn.value);
 
-  const names = rows
-    .map(row => String(row[columnIndex] || "").trim())
-    .filter(name => name !== "");
-
-  return [...new Set(names)];
+  return [...new Set(
+    rows
+      .map(row => String(row[columnIndex] || "").trim())
+      .filter(name => name !== "")
+  )];
 }
 
 function shuffle(array) {
   for (let index = array.length - 1; index > 0; index--) {
     const randomIndex = Math.floor(Math.random() * (index + 1));
-    [array[index], array[randomIndex]] = [
-      array[randomIndex],
-      array[index]
-    ];
+    [array[index], array[randomIndex]] = [array[randomIndex], array[index]];
   }
 
   return array;
@@ -186,7 +173,6 @@ function renderSelectedNames() {
   selectedThisPull.forEach((name, index) => {
     const row = document.createElement("div");
     row.className = "selected-name";
-    row.style.animationDelay = `${index * 50}ms`;
 
     const number = document.createElement("span");
     number.className = "selected-number";
@@ -202,6 +188,42 @@ function renderSelectedNames() {
   });
 }
 
+function collapseSetup() {
+  isSetupCollapsed = true;
+  setupCard.classList.add("collapsed");
+  collapsedSummary.classList.remove("hidden");
+  toggleIcon.textContent = "▶";
+  setupToggle.setAttribute("aria-expanded", "false");
+  setupSubtitle.textContent = "Click to expand setup.";
+  updateSummary();
+}
+
+function expandSetup() {
+  isSetupCollapsed = false;
+  setupCard.classList.remove("collapsed");
+  collapsedSummary.classList.add("hidden");
+  toggleIcon.textContent = "▼";
+  setupToggle.setAttribute("aria-expanded", "true");
+  setupSubtitle.textContent = "Upload a CSV file and select the column containing the names.";
+}
+
+function toggleSetup() {
+  if (isSetupCollapsed) {
+    expandSetup();
+  } else {
+    collapseSetup();
+  }
+}
+
+function startNewPull() {
+  selectedThisPull = [];
+  renderSelectedNames();
+  expandSetup();
+  newPullButton.classList.add("hidden");
+  showMessage("Ready for the next pull.", "success");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 function updateCounts() {
   const names = rows.length ? getUniqueNames() : [];
   const shouldExclude = excludeChoice.value === "yes";
@@ -213,15 +235,25 @@ function updateCounts() {
   loadedCount.textContent = String(names.length);
   availableCount.textContent = String(available);
   previousCount.textContent = String(previouslySelected.length);
+
+  updateSummary();
+}
+
+function updateSummary() {
+  summaryFile.textContent = fileName.textContent;
+  summaryPulled.textContent = String(selectedThisPull.length);
+  summaryExclude.textContent = excludeChoice.value === "yes" ? "Yes" : "No";
+  summaryAvailable.textContent = availableCount.textContent;
 }
 
 function resetSelections() {
   previouslySelected = [];
   selectedThisPull = [];
-
   renderSelectedNames();
   updateCounts();
-  showMessage("Selections were reset. All loaded names are available again.", "success");
+  expandSetup();
+  newPullButton.classList.add("hidden");
+  showMessage("Selections were reset.", "success");
 }
 
 function resetEverything() {
@@ -240,6 +272,8 @@ function resetEverything() {
 
   renderSelectedNames();
   updateCounts();
+  expandSetup();
+  newPullButton.classList.add("hidden");
   showMessage("The system was completely reset.", "success");
 }
 
@@ -265,14 +299,8 @@ function parseCSV(text) {
     } else if (character === "," && !insideQuotes) {
       row.push(value);
       value = "";
-    } else if (
-      (character === "\n" || character === "\r") &&
-      !insideQuotes
-    ) {
-      if (character === "\r" && nextCharacter === "\n") {
-        index++;
-      }
-
+    } else if ((character === "\n" || character === "\r") && !insideQuotes) {
+      if (character === "\r" && nextCharacter === "\n") index++;
       row.push(value);
       output.push(row);
       row = [];
