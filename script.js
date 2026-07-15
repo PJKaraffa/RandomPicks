@@ -1,259 +1,280 @@
 let rows = [];
 let headers = [];
-let excludedNames = [];
+let previouslySelected = [];
 let selectedThisPull = [];
 
 const fileInput = document.getElementById("fileInput");
 const fileName = document.getElementById("fileName");
 const nameColumn = document.getElementById("nameColumn");
 const pullNumber = document.getElementById("pullNumber");
+const excludeChoice = document.getElementById("excludeChoice");
 const pullButton = document.getElementById("pullButton");
 const resetButton = document.getElementById("resetButton");
-const restoreAllButton = document.getElementById("restoreAllButton");
+const resetAllButton = document.getElementById("resetAllButton");
 const selectedList = document.getElementById("selectedList");
-const excludedList = document.getElementById("excludedList");
 const message = document.getElementById("message");
+const loadedCount = document.getElementById("loadedCount");
 const availableCount = document.getElementById("availableCount");
-const excludedCount = document.getElementById("excludedCount");
+const previousCount = document.getElementById("previousCount");
 
-fileInput.addEventListener("change", loadFile);
-pullButton.addEventListener("click", pullNames);
-resetButton.addEventListener("click", resetEverything);
-restoreAllButton.addEventListener("click", restoreAll);
+fileInput.addEventListener("change", loadCSV);
+pullButton.addEventListener("click", pullRandomNames);
+resetButton.addEventListener("click", resetSelections);
+resetAllButton.addEventListener("click", resetEverything);
+nameColumn.addEventListener("change", updateCounts);
+excludeChoice.addEventListener("change", updateCounts);
 
-async function loadFile(event) {
+async function loadCSV(event) {
   const file = event.target.files[0];
 
   if (!file) {
     return;
   }
 
-  fileName.textContent = file.name;
+  try {
+    const text = await file.text();
+    const parsed = parseCSV(text);
 
-  const text = await file.text();
-  const parsed = parseCSV(text);
+    if (parsed.length < 2) {
+      throw new Error("The CSV must contain headings and at least one data row.");
+    }
 
-  if (parsed.length < 2) {
-    showMessage("The file must have a heading row and at least one name.", "error");
-    return;
+    headers = parsed[0].map((value, index) => {
+      const heading = String(value || "").trim();
+      return heading || `Column ${index + 1}`;
+    });
+
+    rows = parsed
+      .slice(1)
+      .filter(row => row.some(value => String(value || "").trim() !== ""));
+
+    if (!rows.length) {
+      throw new Error("No usable names were found in the file.");
+    }
+
+    fillColumnDropdown();
+
+    const suggestedColumn = headers.findIndex(header =>
+      header.toLowerCase().includes("name")
+    );
+
+    if (suggestedColumn >= 0) {
+      nameColumn.value = String(suggestedColumn);
+    }
+
+    fileName.textContent = file.name;
+    nameColumn.disabled = false;
+    pullButton.disabled = false;
+
+    previouslySelected = [];
+    selectedThisPull = [];
+
+    renderSelectedNames();
+    updateCounts();
+    showMessage(`${rows.length} record(s) loaded.`, "success");
+  } catch (error) {
+    rows = [];
+    headers = [];
+    fileInput.value = "";
+    fileName.textContent = "No file selected";
+    nameColumn.innerHTML = '<option value="">Upload a file first</option>';
+    nameColumn.disabled = true;
+    pullButton.disabled = true;
+
+    renderSelectedNames();
+    updateCounts();
+    showMessage(error.message || "The file could not be loaded.", "error");
   }
+}
 
-  headers = parsed[0].map(value => value.trim());
-
-  rows = parsed
-    .slice(1)
-    .filter(row => row.some(value => value.trim() !== ""));
-
+function fillColumnDropdown() {
   nameColumn.innerHTML = "";
 
   headers.forEach((header, index) => {
     const option = document.createElement("option");
-    option.value = index;
-    option.textContent = header || `Column ${index + 1}`;
+    option.value = String(index);
+    option.textContent = header;
     nameColumn.appendChild(option);
   });
-
-  const suggestedIndex = headers.findIndex(header =>
-    header.toLowerCase().includes("name")
-  );
-
-  if (suggestedIndex >= 0) {
-    nameColumn.value = suggestedIndex;
-  }
-
-  excludedNames = [];
-  selectedThisPull = [];
-
-  nameColumn.disabled = false;
-  pullButton.disabled = false;
-  restoreAllButton.disabled = true;
-
-  renderLists();
-  updateCounts();
-  showMessage(`${rows.length} records loaded successfully.`, "success");
 }
 
-function pullNames() {
-  const columnIndex = Number(nameColumn.value);
-  const amount = Number(pullNumber.value);
+function pullRandomNames() {
+  if (!rows.length) {
+    showMessage("Upload a CSV file first.", "error");
+    return;
+  }
+
+  const amount = Number.parseInt(pullNumber.value, 10);
 
   if (!Number.isInteger(amount) || amount < 1) {
     showMessage("Enter a valid number to pull.", "error");
     return;
   }
 
-  const availableNames = rows
-    .map(row => (row[columnIndex] || "").trim())
-    .filter(name => name !== "")
-    .filter(name => !excludedNames.includes(name));
+  const allNames = getUniqueNames();
+  const shouldExclude = excludeChoice.value === "yes";
 
-  const uniqueAvailable = [...new Set(availableNames)];
+  const eligibleNames = shouldExclude
+    ? allNames.filter(name => !previouslySelected.includes(name))
+    : allNames;
 
-  if (amount > uniqueAvailable.length) {
+  if (!eligibleNames.length) {
+    showMessage("There are no names available. Click Reset to start again.", "error");
+    return;
+  }
+
+  if (amount > eligibleNames.length) {
     showMessage(
-      `Only ${uniqueAvailable.length} name(s) are still available.`,
+      `Only ${eligibleNames.length} name(s) are available for this pull.`,
       "error"
     );
     return;
   }
 
-  shuffle(uniqueAvailable);
-  selectedThisPull = uniqueAvailable.slice(0, amount);
+  const shuffled = shuffle([...eligibleNames]);
+  selectedThisPull = shuffled.slice(0, amount);
 
-  selectedThisPull.forEach(name => {
-    if (!excludedNames.includes(name)) {
-      excludedNames.push(name);
-    }
-  });
+  if (shouldExclude) {
+    selectedThisPull.forEach(name => {
+      if (!previouslySelected.includes(name)) {
+        previouslySelected.push(name);
+      }
+    });
+  }
 
-  renderLists();
+  renderSelectedNames();
   updateCounts();
-  showMessage(`${amount} name(s) selected.`, "success");
+
+  const ending = shouldExclude
+    ? " They will be excluded from the next pull."
+    : " Repeats are allowed on the next pull.";
+
+  showMessage(`${amount} name(s) selected.${ending}`, "success");
+}
+
+function getUniqueNames() {
+  const columnIndex = Number(nameColumn.value);
+
+  const names = rows
+    .map(row => String(row[columnIndex] || "").trim())
+    .filter(name => name !== "");
+
+  return [...new Set(names)];
 }
 
 function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+  for (let index = array.length - 1; index > 0; index--) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [array[index], array[randomIndex]] = [
+      array[randomIndex],
+      array[index]
+    ];
   }
+
+  return array;
 }
 
-function renderLists() {
+function renderSelectedNames() {
   selectedList.innerHTML = "";
 
-  if (selectedThisPull.length === 0) {
-    selectedList.className = "name-list empty-list";
-    selectedList.innerHTML = '<div class="empty-message">No names selected yet.</div>';
-  } else {
-    selectedList.className = "name-list";
-
-    selectedThisPull.forEach((name, index) => {
-      const item = document.createElement("div");
-      item.className = "name-card selected";
-
-      const number = document.createElement("span");
-      number.className = "name-number";
-      number.textContent = index + 1;
-
-      const text = document.createElement("span");
-      text.className = "name-text";
-      text.textContent = name;
-
-      item.appendChild(number);
-      item.appendChild(text);
-      selectedList.appendChild(item);
-    });
+  if (!selectedThisPull.length) {
+    selectedList.innerHTML =
+      '<div class="empty-message">No names selected yet.</div>';
+    return;
   }
 
-  excludedList.innerHTML = "";
+  selectedThisPull.forEach((name, index) => {
+    const row = document.createElement("div");
+    row.className = "selected-name";
+    row.style.animationDelay = `${index * 50}ms`;
 
-  if (excludedNames.length === 0) {
-    excludedList.className = "name-list empty-list";
-    excludedList.innerHTML = '<div class="empty-message">No excluded names.</div>';
-    restoreAllButton.disabled = true;
-  } else {
-    excludedList.className = "name-list";
+    const number = document.createElement("span");
+    number.className = "selected-number";
+    number.textContent = String(index + 1);
 
-    excludedNames.forEach(name => {
-      const item = document.createElement("div");
-      item.className = "name-card";
+    const text = document.createElement("span");
+    text.className = "selected-text";
+    text.textContent = name;
 
-      const text = document.createElement("span");
-      text.className = "name-text";
-      text.textContent = name;
-
-      const restoreButton = document.createElement("button");
-      restoreButton.className = "restore-button";
-      restoreButton.textContent = "Restore";
-      restoreButton.addEventListener("click", () => restoreName(name));
-
-      item.appendChild(text);
-      item.appendChild(restoreButton);
-      excludedList.appendChild(item);
-    });
-
-    restoreAllButton.disabled = false;
-  }
+    row.appendChild(number);
+    row.appendChild(text);
+    selectedList.appendChild(row);
+  });
 }
 
-function restoreName(name) {
-  excludedNames = excludedNames.filter(item => item !== name);
-  selectedThisPull = selectedThisPull.filter(item => item !== name);
+function updateCounts() {
+  const names = rows.length ? getUniqueNames() : [];
+  const shouldExclude = excludeChoice.value === "yes";
 
-  renderLists();
-  updateCounts();
-  showMessage(`${name} was restored.`, "success");
+  const available = shouldExclude
+    ? names.filter(name => !previouslySelected.includes(name)).length
+    : names.length;
+
+  loadedCount.textContent = String(names.length);
+  availableCount.textContent = String(available);
+  previousCount.textContent = String(previouslySelected.length);
 }
 
-function restoreAll() {
-  excludedNames = [];
+function resetSelections() {
+  previouslySelected = [];
   selectedThisPull = [];
 
-  renderLists();
+  renderSelectedNames();
   updateCounts();
-  showMessage("All names were restored.", "success");
+  showMessage("Selections were reset. All loaded names are available again.", "success");
 }
 
 function resetEverything() {
   rows = [];
   headers = [];
-  excludedNames = [];
+  previouslySelected = [];
   selectedThisPull = [];
 
   fileInput.value = "";
   fileName.textContent = "No file selected";
   nameColumn.innerHTML = '<option value="">Upload a file first</option>';
   nameColumn.disabled = true;
+  pullNumber.value = "1";
+  excludeChoice.value = "yes";
   pullButton.disabled = true;
-  restoreAllButton.disabled = true;
-  pullNumber.value = 1;
 
-  renderLists();
+  renderSelectedNames();
   updateCounts();
-  showMessage("System reset.", "success");
-}
-
-function updateCounts() {
-  const columnIndex = Number(nameColumn.value);
-
-  const allNames = rows
-    .map(row => (row[columnIndex] || "").trim())
-    .filter(name => name !== "");
-
-  const uniqueNames = [...new Set(allNames)];
-  const available = uniqueNames.filter(name => !excludedNames.includes(name));
-
-  availableCount.textContent = available.length;
-  excludedCount.textContent = excludedNames.length;
+  showMessage("The system was completely reset.", "success");
 }
 
 function parseCSV(text) {
-  const rows = [];
+  const output = [];
   let row = [];
   let value = "";
   let insideQuotes = false;
 
-  for (let i = 0; i < text.length; i++) {
-    const character = text[i];
-    const nextCharacter = text[i + 1];
+  const cleanText = text.replace(/^\uFEFF/, "");
+
+  for (let index = 0; index < cleanText.length; index++) {
+    const character = cleanText[index];
+    const nextCharacter = cleanText[index + 1];
 
     if (character === '"') {
       if (insideQuotes && nextCharacter === '"') {
         value += '"';
-        i++;
+        index++;
       } else {
         insideQuotes = !insideQuotes;
       }
     } else if (character === "," && !insideQuotes) {
       row.push(value);
       value = "";
-    } else if ((character === "\n" || character === "\r") && !insideQuotes) {
+    } else if (
+      (character === "\n" || character === "\r") &&
+      !insideQuotes
+    ) {
       if (character === "\r" && nextCharacter === "\n") {
-        i++;
+        index++;
       }
 
       row.push(value);
-      rows.push(row);
+      output.push(row);
       row = [];
       value = "";
     } else {
@@ -263,18 +284,13 @@ function parseCSV(text) {
 
   if (value !== "" || row.length > 0) {
     row.push(value);
-    rows.push(row);
+    output.push(row);
   }
 
-  return rows;
+  return output;
 }
 
 function showMessage(text, type) {
   message.textContent = text;
-
-  if (type === "error") {
-    message.style.color = "#b42318";
-  } else {
-    message.style.color = "#16803c";
-  }
+  message.style.color = type === "error" ? "#bd2c2c" : "#159447";
 }
