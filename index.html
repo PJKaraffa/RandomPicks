@@ -26,90 +26,120 @@
 
 <main class="page">
 
-  <section class="card setup-card">
-    <div class="section-heading">
-      <span class="step">1</span>
+  <section id="setupCard" class="card setup-card">
+    <button id="setupToggle" class="setup-toggle" type="button" aria-expanded="true">
+      <span class="toggle-left">
+        <span class="step">1</span>
+        <span>
+          <strong>Load Your List</strong>
+          <small id="setupSubtitle">Upload a CSV file and select the column containing the names.</small>
+        </span>
+      </span>
+      <span id="toggleIcon" class="toggle-icon">▼</span>
+    </button>
+
+    <div id="setupContent" class="setup-content">
+      <div class="control-grid">
+
+        <div class="field upload-field">
+          <label>CSV File</label>
+
+          <label for="fileInput" class="upload-box">
+            <span class="upload-icon">↑</span>
+            <span class="upload-text">
+              <strong>Choose a CSV file</strong>
+              <small id="fileName">No file selected</small>
+            </span>
+          </label>
+
+          <input id="fileInput" type="file" accept=".csv,text/csv" hidden>
+        </div>
+
+        <div class="field">
+          <label for="nameColumn">Name Column</label>
+          <select id="nameColumn" disabled>
+            <option value="">Upload a file first</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="pullNumber">Number to Pull</label>
+          <input id="pullNumber" type="number" min="1" value="1">
+        </div>
+
+        <div class="field">
+          <label for="excludeChoice">Exclude Previously Selected Names</label>
+          <select id="excludeChoice">
+            <option value="yes" selected>Yes — exclude</option>
+            <option value="no">No — allow repeats</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="action-row">
+        <button id="pullButton" class="pull-button" type="button" disabled>
+          ⇄ &nbsp; Pull Random Names
+        </button>
+
+        <button id="resetButton" class="reset-button" type="button">
+          Reset
+        </button>
+      </div>
+
+      <p id="message" class="message"></p>
+
+      <div class="status-row">
+        <div class="status-item">
+          <span>Loaded</span>
+          <strong id="loadedCount">0</strong>
+        </div>
+
+        <div class="status-item">
+          <span>Available</span>
+          <strong id="availableCount">0</strong>
+        </div>
+
+        <div class="status-item">
+          <span>Previously selected</span>
+          <strong id="previousCount">0</strong>
+        </div>
+      </div>
+    </div>
+
+    <div id="collapsedSummary" class="collapsed-summary hidden">
       <div>
-        <h2>Load Your List</h2>
-        <p>Upload a CSV file and select the column containing the names.</p>
+        <span>CSV</span>
+        <strong id="summaryFile">None</strong>
       </div>
-    </div>
-
-    <div class="control-grid">
-
-      <div class="field upload-field">
-        <label>CSV File</label>
-
-        <label for="fileInput" class="upload-box">
-          <span class="upload-icon">↑</span>
-          <span class="upload-text">
-            <strong>Choose a CSV file</strong>
-            <small id="fileName">No file selected</small>
-          </span>
-        </label>
-
-        <input id="fileInput" type="file" accept=".csv,text/csv" hidden>
+      <div>
+        <span>Number Pulled</span>
+        <strong id="summaryPulled">0</strong>
       </div>
-
-      <div class="field">
-        <label for="nameColumn">Name Column</label>
-        <select id="nameColumn" disabled>
-          <option value="">Upload a file first</option>
-        </select>
+      <div>
+        <span>Exclude Previous</span>
+        <strong id="summaryExclude">Yes</strong>
       </div>
-
-      <div class="field">
-        <label for="pullNumber">Number to Pull</label>
-        <input id="pullNumber" type="number" min="1" value="1">
-      </div>
-
-      <div class="field">
-        <label for="excludeChoice">Exclude Previously Selected Names</label>
-        <select id="excludeChoice">
-          <option value="yes" selected>Yes — exclude</option>
-          <option value="no">No — allow repeats</option>
-        </select>
-      </div>
-
-    </div>
-
-    <div class="action-row">
-      <button id="pullButton" class="pull-button" type="button" disabled>
-        ⇄ &nbsp; Pull Random Names
-      </button>
-
-      <button id="resetButton" class="reset-button" type="button">
-        Reset
-      </button>
-    </div>
-
-    <p id="message" class="message"></p>
-
-    <div class="status-row">
-      <div class="status-item">
-        <span>Loaded</span>
-        <strong id="loadedCount">0</strong>
-      </div>
-
-      <div class="status-item">
-        <span>Available</span>
-        <strong id="availableCount">0</strong>
-      </div>
-
-      <div class="status-item">
-        <span>Previously selected</span>
-        <strong id="previousCount">0</strong>
+      <div>
+        <span>Available Remaining</span>
+        <strong id="summaryAvailable">0</strong>
       </div>
     </div>
   </section>
 
   <section class="card results-card">
-    <div class="section-heading">
-      <span class="step">2</span>
-      <div>
-        <h2>Selected Names</h2>
-        <p>Names selected in the latest pull.</p>
+    <div class="results-heading-row">
+      <div class="section-heading">
+        <span class="step">2</span>
+        <div>
+          <h2>Selected Names</h2>
+          <p>Names selected in the latest pull.</p>
+        </div>
       </div>
+
+      <button id="newPullButton" class="new-pull-button hidden" type="button">
+        New Pull
+      </button>
     </div>
 
     <div id="selectedList" class="selected-list">
